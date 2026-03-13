@@ -16,6 +16,7 @@ from langchain_core.tools import StructuredTool
 from langgraph.types import Command
 
 from deepagents.backends.protocol import BackendFactory, BackendProtocol
+from deepagents.middleware._message_utils import extract_message_content
 from deepagents.middleware._utils import append_to_system_message
 
 
@@ -410,8 +411,9 @@ def _build_task_tool(  # noqa: C901
             raise ValueError(error_msg)
 
         state_update = {k: v for k, v in result.items() if k not in _EXCLUDED_STATE_KEYS}
-        # Strip trailing whitespace to prevent API errors with Anthropic
-        message_text = result["messages"][-1].text.rstrip() if result["messages"][-1].text else ""
+        # Fix for https://github.com/langchain-ai/deepagents/issues/979
+        # LangChain messages use .content, not .text
+        message_text = extract_message_content(result["messages"][-1]).rstrip()
         return Command(
             update={
                 **state_update,
